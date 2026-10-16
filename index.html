@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSSD – Mobiler Sanitäts- und Servicedienst Marc Schmidt</title>
+    <link rel="stylesheet" href="index-style.css">
+    <style>
+        body {
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Hintergrund-Animation: Der Krankenwagen (Stabil & Ruckelfrei) */
+        .ambulance-track {
+            position: fixed;
+            bottom: 12px;
+            left: -220px;
+            width: 140px;
+            height: 60px;
+            z-index: 100;
+            opacity: 0.85;
+            animation: driveAmbulance 20s linear infinite;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s ease;
+        }
+
+        /* Butterweicher Hover-Effekt ohne Ruckeln oder Springen */
+        .ambulance-track:hover {
+            opacity: 1;
+            transform: scale(1.15) translateY(-5px);
+            filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.6));
+        }
+
+        .ambulance-body {
+            position: absolute;
+            bottom: 6px;
+            width: 110px;
+            height: 40px;
+            background: #161b22;
+            border: 2px solid #58a6ff;
+            border-radius: 8px 14px 4px 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.2s ease;
+        }
+
+        .ambulance-track:hover .ambulance-body {
+            border-color: #60a5fa;
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.4);
+        }
+
+        .ambulance-stripe {
+            position: absolute;
+            top: 18px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: #ef4444;
+        }
+
+        /* Sauberes rotes Sanitätskreuz */
+        .ambulance-cross {
+            position: absolute;
+            top: 6px;
+            left: 18px;
+            width: 14px;
+            height: 14px;
+        }
+        .ambulance-cross-v {
+            position: absolute;
+            top: 0;
+            left: 5px;
+            width: 4px;
+            height: 14px;
+            background: #ef4444;
+            border-radius: 1px;
+        }
+        .ambulance-cross-h {
+            position: absolute;
+            top: 5px;
+            left: 0;
+            width: 14px;
+            height: 4px;
+            background: #ef4444;
+            border-radius: 1px;
+        }
+
+        .ambulance-roof {
+            position: absolute;
+            bottom: 44px;
+            left: 32px;
+            width: 55px;
+            height: 16px;
+            background: #161b22;
+            border: 2px solid #58a6ff;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+
+        /* Sich drehende Räder mit Speichen */
+        .ambulance-wheel-1, .ambulance-wheel-2 {
+            position: absolute;
+            bottom: -4px;
+            width: 20px;
+            height: 20px;
+            background: #0d1117;
+            border: 2px solid #58a6ff;
+            border-radius: 50%;
+            z-index: 2;
+            animation: spinWheel 0.8s linear infinite;
+        }
+        .ambulance-wheel-1 { left: 18px; }
+        .ambulance-wheel-2 { right: 18px; }
+
+        /* Speichen im Rad */
+        .ambulance-wheel-1::after, .ambulance-wheel-2::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 7px;
+            width: 2px;
+            height: 12px;
+            background: #58a6ff;
+        }
+        .ambulance-wheel-1::before, .ambulance-wheel-2::before {
+            content: '';
+            position: absolute;
+            top: 7px;
+            left: 2px;
+            width: 12px;
+            height: 2px;
+            background: #58a6ff;
+        }
+
+        @keyframes spinWheel {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .headlight {
+            position: absolute;
+            bottom: 12px;
+            right: -15px;
+            width: 20px;
+            height: 12px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 80%);
+            border-radius: 50%;
+        }
+
+        .siren-light {
+            position: absolute;
+            bottom: 60px;
+            left: 54px;
+            width: 14px;
+            height: 10px;
+            background: #2563eb;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #3b82f6;
+            animation: flashBlue 0.4s ease-in-out infinite alternate;
+            z-index: 3;
+        }
+
+        /* Turbo-Blinken des Blaulichts beim Hover (ohne Lag) */
+        .ambulance-track:hover .siren-light {
+            animation: flashBlueFast 0.15s ease-in-out infinite alternate;
+        }
+
+        @keyframes flashBlue {
+            0% { opacity: 0.3; background: #1d4ed8; box-shadow: 0 0 5px #1d4ed8; }
+            100% { opacity: 1; background: #60a5fa; box-shadow: 0 0 25px #3b82f6, 0 0 45px #60a5fa; }
+        }
+
+        @keyframes flashBlueFast {
+            0% { opacity: 0.2; background: #1e3a8a; box-shadow: 0 0 2px #1e3a8a; }
+            100% { opacity: 1; background: #93c5fd; box-shadow: 0 0 35px #3b82f6, 0 0 60px #93c5fd; }
+        }
+
+        @keyframes driveAmbulance {
+            0% { transform: translateX(0vw); }
+            100% { transform: translateX(120vw); }
+        }
+
+        #cursor-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(88, 166, 255, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        .live-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(35, 134, 54, 0.15);
+            border: 1px solid rgba(35, 134, 54, 0.4);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #2ea043;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #2ea043;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #2ea043;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 160, 67, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(46, 160, 67, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 160, 67, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="cursor-glow"></div>
+
+    <!-- Krankenwagen -->
+    <div class="ambulance-track" id="interactiveAmbulance" title="Klick mich für Martinshorn!">
+        <div class="siren-light"></div>
+        <div class="ambulance-roof"></div>
+        <div class="ambulance-body">
+            <div class="ambulance-stripe"></div>
+            <div class="ambulance-cross">
+                <div class="ambulance-cross-v"></div>
+                <div class="ambulance-cross-h"></div>
+            </div>
+            <div class="headlight"></div>
+        </div>
+        <div class="ambulance-wheel-1"></div>
+        <div class="ambulance-wheel-2"></div>
+    </div>
+
+    <header class="site-header">
+        <div class="logo">MSSD Marc Schmidt</div>
+        <nav class="nav-links">
+            <a href="index.html">Startseite</a>
+            <a href="#leistungen">Leistungen</a>
+            <a href="#ueber">Über uns</a>
+            <a href="anfrage.html" style="color: #58a6ff; font-weight: bold;">Anfrage stellen</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="hero-section">
+            <div class="live-status">
+                <div class="pulse-dot"></div>
+                <span>Einsatzbereitschaft: 24/7 Online &amp; Aktiv</span>
+            </div>
+            <h1>Mobiler Sanitäts- und Servicedienst Marc Schmidt</h1>
+            <p>Ihr qualifizierter Partner für professionelle Notfallvorsorge, Privatveranstaltungen und spezialisierte Absicherung im Inklusions- und Para-Sport.</p>
+            
+            <div class="hero-actions" style="display: flex; gap: 15px; align-items: center;">
+                <a href="anfrage.html" class="btn btn-primary">🚑 Jetzt Sanitätsdienst anfragen</a>
+                <a href="#leistungen" class="btn btn-secondary">Mehr erfahren ↓</a>
+            </div>
+        </section>
+
+        <section id="leistungen">
+            <h2>Unsere Sanitätsdienste</h2>
+            <p>Professionelle medizinische Absicherung maßgeschneidert für Ihren Anlass.</p>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>Privatveranstaltungen</h3>
+                    <p>Qualifizierte medizinische Betreuung für private Feiern, Firmenevents und regionale Veranstaltungen – diskret, aufmerksam und verlässlich.</p>
+                </div>
+
+                <div class="card">
+                    <h3>Sport- &amp; Wettkampfbetreuung</h3>
+                    <p>Erfahrene Erstversorgung direkt am Spielfeldrand oder Wettkampfort für Sportler, Organisationsteams und Besucher.</p>
+                </div>
+
+                <div class="card">
+                    <h3>Inklusions- &amp; Para-Sport</h3>
+                    <p>Spezialisierte sanitätsdienstliche Begleitung mit tiefem Verständnis für barrierefreie und inklusive Sportevents.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="ueber" style="margin-top: 80px;">
+            <h2>Warum MSSD?</h2>
+            <p>Höchste Zuverlässigkeit, modernste Ausrüstung und jahrelange Einsatzerfahrung im Rettungsdienst.</p>
+            <div class="card-grid">
+                <div class="card">
+                    <h3>⚡ Schnelle Reaktionszeit</h3>
+                    <p>Direkte Kommunikation, reibungslose Abläufe und professionelle Vorbereitung von der Anfrage bis zum Event.</p>
+                </div>
+                <div class="card">
+                    <h3>🛡️ Höchste Standards</h3>
+                    <p>Qualifiziertes Personal und strukturierte Dokumentation geben Ihnen als Veranstalter absolute Sicherheit.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; 2026 MSSD Mobiler Sanitäts- und Servicedienst Marc Schmidt. Alle Rechte vorbehalten. | <a href="anfrage.html">Online-Anfrage</a></p>
+    </footer>
+
+    <script>
+        // Cursor-Glow
+        const glow = document.getElementById('cursor-glow');
+        window.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        // Optionaler Klick-Sound (dezent & leise)
+        let audioCtx = null;
+        let isPlaying = false;
+
+        function playSirenOnClick() {
+            if (isPlaying) return;
+            isPlaying = true;
+
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            if (!audioCtx) audioCtx = new AudioContext();
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            gain.gain.setValueAtTime(0.08, now);
+
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(580, now + 0.22);
+            osc.frequency.setValueAtTime(440, now + 0.44);
+            osc.frequency.setValueAtTime(580, now + 0.66);
+
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+
+            osc.start(now);
+            osc.stop(now + 0.9);
+
+            setTimeout(() => { isPlaying = false; }, 950);
+        }
+
+        const amb = document.getElementById('interactiveAmbulance');
+        amb.addEventListener('click', playSirenOnClick);
+    </script>
+</body>
+</html>

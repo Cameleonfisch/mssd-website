@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anfrage senden | MSSD Marc Schmidt</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Flatpickr Deutscher Kalender (Dark Theme) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/de.js"></script>
+
+    <style>
+        html { scroll-behavior: smooth; }
+
+        /* Maus-Follower Glow Effekt */
+        #cursor-glow {
+            position: fixed;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(88, 166, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+        }
+
+        /* Krankenwagen im VORDERGRUND (z-index: 1000) */
+        .ambulance-track {
+            position: fixed;
+            bottom: 20px;
+            left: -220px;
+            width: 140px;
+            height: 60px;
+            z-index: 1000; /* VORDERGRUND */
+            opacity: 0.95;
+            animation: driveAmbulance 20s linear infinite;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s ease;
+        }
+
+        .ambulance-track:hover {
+            opacity: 1;
+            transform: scale(1.15) translateY(-5px);
+            filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.8));
+        }
+
+        .ambulance-body {
+            position: absolute;
+            bottom: 6px;
+            width: 110px;
+            height: 40px;
+            background: #161b22;
+            border: 2px solid #58a6ff;
+            border-radius: 8px 14px 4px 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            transition: border-color 0.2s ease;
+        }
+
+        .ambulance-track:hover .ambulance-body {
+            border-color: #60a5fa;
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.5);
+        }
+
+        .ambulance-stripe {
+            position: absolute;
+            top: 18px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: #ef4444;
+        }
+
+        .ambulance-cross {
+            position: absolute;
+            top: 6px;
+            left: 18px;
+            width: 14px;
+            height: 14px;
+        }
+        .ambulance-cross-v {
+            position: absolute;
+            top: 0;
+            left: 5px;
+            width: 4px;
+            height: 14px;
+            background: #ef4444;
+            border-radius: 1px;
+        }
+        .ambulance-cross-h {
+            position: absolute;
+            top: 5px;
+            left: 0;
+            width: 14px;
+            height: 4px;
+            background: #ef4444;
+            border-radius: 1px;
+        }
+
+        .ambulance-roof {
+            position: absolute;
+            bottom: 44px;
+            left: 32px;
+            width: 55px;
+            height: 16px;
+            background: #161b22;
+            border: 2px solid #58a6ff;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .ambulance-wheel-1, .ambulance-wheel-2 {
+            position: absolute;
+            bottom: -4px;
+            width: 20px;
+            height: 20px;
+            background: #0d1117;
+            border: 2px solid #58a6ff;
+            border-radius: 50%;
+            z-index: 2;
+            animation: spinWheel 0.8s linear infinite;
+        }
+        .ambulance-wheel-1 { left: 18px; }
+        .ambulance-wheel-2 { right: 18px; }
+
+        .ambulance-wheel-1::after, .ambulance-wheel-2::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 7px;
+            width: 2px;
+            height: 12px;
+            background: #58a6ff;
+        }
+        .ambulance-wheel-1::before, .ambulance-wheel-2::before {
+            content: '';
+            position: absolute;
+            top: 7px;
+            left: 2px;
+            width: 12px;
+            height: 2px;
+            background: #58a6ff;
+        }
+
+        @keyframes spinWheel {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .headlight {
+            position: absolute;
+            bottom: 12px;
+            right: -15px;
+            width: 20px;
+            height: 12px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 80%);
+            border-radius: 50%;
+        }
+
+        .siren-light {
+            position: absolute;
+            bottom: 60px;
+            left: 54px;
+            width: 14px;
+            height: 10px;
+            background: #2563eb;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #3b82f6;
+            animation: flashBlue 0.4s ease-in-out infinite alternate;
+            z-index: 3;
+        }
+
+        .ambulance-track:hover .siren-light {
+            animation: flashBlueFast 0.15s ease-in-out infinite alternate;
+        }
+
+        @keyframes flashBlue {
+            0% { opacity: 0.3; background: #1d4ed8; box-shadow: 0 0 5px #1d4ed8; }
+            100% { opacity: 1; background: #60a5fa; box-shadow: 0 0 25px #3b82f6, 0 0 45px #60a5fa; }
+        }
+
+        @keyframes flashBlueFast {
+            0% { opacity: 0.2; background: #1e3a8a; box-shadow: 0 0 2px #1e3a8a; }
+            100% { opacity: 1; background: #93c5fd; box-shadow: 0 0 35px #3b82f6, 0 0 60px #93c5fd; }
+        }
+
+        @keyframes driveAmbulance {
+            0% { transform: translateX(0vw); }
+            100% { transform: translateX(120vw); }
+        }
+
+        /* Erfolgs-Modal */
+        #successModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .success-box {
+            background: #161b22;
+            border: 2px solid #238636;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 420px;
+            color: #c9d1d9;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .success-box h3 { color: #2ea043; margin-bottom: 10px; font-size: 1.5rem; }
+        .success-box button {
+            margin-top: 20px;
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+        .success-box button:hover { background: #2ea043; }
+
+        /* Flatpickr Design Anpassung */
+        .flatpickr-calendar {
+            background: #161b22 !important;
+            border: 1px solid #30363d !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6) !important;
+        }
+        .flatpickr-day.selected {
+            background: #238636 !important;
+            border-color: #2ea043 !important;
+        }
+        .flatpickr-day:hover {
+            background: #30363d !important;
+        }
+    </style>
+</head>
+<body class="form-body">
+
+    <!-- Maus Glow Effekt -->
+    <div id="cursor-glow"></div>
+
+    <!-- Krankenwagen im VORDERGRUND -->
+    <div class="ambulance-track" id="interactiveAmbulance" title="Klick mich für Martinshorn!">
+        <div class="siren-light"></div>
+        <div class="ambulance-roof"></div>
+        <div class="ambulance-body">
+            <div class="ambulance-stripe"></div>
+            <div class="ambulance-cross">
+                <div class="ambulance-cross-v"></div>
+                <div class="ambulance-cross-h"></div>
+            </div>
+            <div class="headlight"></div>
+        </div>
+        <div class="ambulance-wheel-1"></div>
+        <div class="ambulance-wheel-2"></div>
+    </div>
+
+    <!-- Erfolgs-Pop-up -->
+    <div id="successModal">
+        <div class="success-box">
+            <h3>Erfolgreich abgesendet!</h3>
+            <p>Vielen Dank für Ihre Anfrage. Der MSSD hat Ihre Daten erhalten und wird sich schnellstmöglich bei Ihnen melden.</p>
+            <button onclick="closeSuccessModal()">Fenster schließen &amp; Zur Startseite</button>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <a href="index.html" class="back-link">← Zurück zur Startseite</a>
+
+        <div class="form-header">
+            <h2>Sanitätsdienstliche Absicherung anfragen</h2>
+            <p>MSSD – Mobiler Sanitäts- und Servicedienst Marc Schmidt</p>
+        </div>
+
+        <form id="anfrageForm" action="https://formspree.io/f/xyekljre" method="POST" novalidate onsubmit="return validateAndSubmit(event)">
+            
+            <input type="hidden" name="_subject" value="Neue Event-Anfrage über MSSD Website!">
+            <input type="hidden" id="nachricht_komplett" name="Anfrage_Details">
+
+            <!-- 1. Veranstalter -->
+            <fieldset>
+                <legend>1. Angaben zum Veranstalter / Auftraggeber</legend>
+                
+                <div class="form-group">
+                    <label for="name">Name / Haupt-Ansprechpartner des Veranstalters <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                    <input type="text" id="name" required placeholder="Vor- und Nachname">
+                </div>
+
+                <div class="form-group">
+                    <label for="anschrift_verst">Anschrift des Veranstalters <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                    <input type="text" id="anschrift_verst" required placeholder="Straße, PLZ, Ort">
+                </div>
+
+                <div class="form-group">
+                    <label for="organisation">Organisation / Verein / Firma <span class="opt-text">(Optional)</span></label>
+                    <input type="text" id="organisation" placeholder="Freiwillige Angabe">
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="telefon">Telefonnummer des Veranstalters <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="tel" id="telefon" required placeholder="Nur Ziffern" oninput="this.value = this.value.replace(/[^0-9+\s/-]/g, '')">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-Mail-Adresse <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="email" id="email" required placeholder="beispiel@domain.de">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- 2. Details zur Veranstaltung -->
+            <fieldset>
+                <legend>2. Details zur Veranstaltung</legend>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="veranstaltungsname">Veranstaltungsname <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="text" id="veranstaltungsname" required placeholder="z. B. Sommerturnier 2026">
+                    </div>
+                    <div class="form-group">
+                        <label for="art">Art der Veranstaltung (genaue Bezeichnung) <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="text" id="art" required placeholder="z. B. Fußballturnier, Para-Schwimmen...">
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="ort">Veranstaltungsort / Adresse <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="text" id="ort" required placeholder="Straße, PLZ, Ort, Halle/Sportplatz">
+                    </div>
+                    <div class="form-group">
+                        <label for="freiflache">Größe der Freifläche in m² <span class="opt-text">(Optional)</span></label>
+                        <input type="text" id="freiflache" placeholder="ca. ... m²">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- 3. Besucher & Personal -->
+            <fieldset>
+                <legend>3. Besucher &amp; Personal</legend>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="besucher_zugelassen">Zugelassene Besucher / Teilnehmerzahl (Gesamt) <span class="opt-text">(Optional)</span></label>
+                        <input type="text" id="besucher_zugelassen" placeholder="z. B. 1500">
+                    </div>
+                    <div class="form-group">
+                        <label for="besucher_erwartet">Tatsächlich zu erwartende Besucher- / Teilnehmerzahl <span class="opt-text">(Optional)</span></label>
+                        <input type="text" id="besucher_erwartet" placeholder="z. B. 1000">
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="einsatzkraefte">Benötigte Einsatzkräfte <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <select id="einsatzkraefte" required>
+                            <option value="">-- Bitte wählen --</option>
+                            <option value="2">2 Einsatzkräfte</option>
+                            <option value="3">3 Einsatzkräfte</option>
+                            <option value="4">4 Einsatzkräfte</option>
+                            <option value="5">5 Einsatzkräfte</option>
+                            <option value="6">6 Einsatzkräfte</option>
+                            <option value="7">7 Einsatzkräfte</option>
+                            <option value="8">8 Einsatzkräfte</option>
+                            <option value="9">9 Einsatzkräfte</option>
+                            <option value="10">10 Einsatzkräfte</option>
+                            <option value="11">11 Einsatzkräfte</option>
+                            <option value="12">12 Einsatzkräfte</option>
+                            <option value="13">13 Einsatzkräfte</option>
+                            <option value="14">14 Einsatzkräfte</option>
+                            <option value="15">15 Einsatzkräfte</option>
+                            <option value="16">16 Einsatzkräfte</option>
+                            <option value="17">17 Einsatzkräfte</option>
+                            <option value="18">18 Einsatzkräfte</option>
+                            <option value="19">19 Einsatzkräfte</option>
+                            <option value="20">20 Einsatzkräfte</option>
+                            <option value="Beratung">Beratung / Empfehlung gewünscht</option>
+                            <option value="20_oder_mehr">20 oder mehr Einsatzkräfte</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verpflegung">Verpflegung für Sanitäter vor Ort? <span class="opt-text">(Optional)</span></label>
+                        <select id="verpflegung">
+                            <option value="">-- Keine Angabe --</option>
+                            <option value="Ja">Ja</option>
+                            <option value="Nein">Nein</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- 4. Ansprechpartner vor Ort -->
+            <fieldset>
+                <legend>4. Ansprechpartner vor Ort (während der Veranstaltung)</legend>
+
+                <div class="form-group">
+                    <label for="prominenz">Erwartete Beteiligung prominenter Persönlichkeiten (VIPs) &amp; Sicherheitsstufe <span class="opt-text">(Optional)</span></label>
+                    <input type="text" id="prominenz" placeholder="Namen / Sicherheitsstufe">
+                </div>
+
+                <div class="form-group">
+                    <label for="erkenntnisse">Polizeiliche / sonstige Erkenntnisse <span class="opt-text">(Optional)</span></label>
+                    <textarea id="erkenntnisse" rows="3" placeholder="Erfahrungswerte aus Vorjahren oder Besonderheiten..."></textarea>
+                </div>
+
+                <div class="form-grid-ap">
+                    <div class="form-group">
+                        <label for="ap_name">Name vor Ort <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="text" id="ap_name" required placeholder="Nachname vor Ort">
+                    </div>
+                    <div class="form-group">
+                        <label for="ap_vorname">Vorname vor Ort <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="text" id="ap_vorname" required placeholder="Vorname">
+                    </div>
+                    <div class="form-group">
+                        <label for="ap_handy">Handy vor Ort <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                        <input type="tel" id="ap_handy" required placeholder="Erreichbarkeit vor Ort (Nur Ziffern)" oninput="this.value = this.value.replace(/[^0-9+\s/-]/g, '')">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- 5. Zeitlicher Rahmen -->
+            <fieldset>
+                <legend>5. Zeitlicher Rahmen &amp; Dienstzeiten des Sanitätsdienstes</legend>
+
+                <div class="form-group">
+                    <label for="tageAnzahl">Anzahl der Veranstaltungstage <span class="req-star">*</span><span class="req-text">(Pflichtfeld)</span></label>
+                    <select id="tageAnzahl" required onchange="renderTageTable()">
+                        <script>
+                            for(let d=1; d<=50; d++) {
+                                document.write(`<option value="${d}">${d} Tag${d > 1 ? 'e' : ''}</option>`);
+                            }
+                        </script>
+                    </select>
+                </div>
+
+                <div class="form-group checkbox-group" id="gleicheZeitenWrapper">
+                    <label>
+                        <input type="checkbox" id="gleicheZeiten" checked onchange="toggleGleicheZeiten()"> 
+                        Gleiche Uhrzeiten für alle Tage übernehmen
+                    </label>
+                </div>
+
+                <div id="tageTableContainer"></div>
+
+                <div class="info-note">
+                    ℹ️ <strong>Abrechnungshinweis:</strong><br>
+                    Für jeden Einsatztag gilt eine Mindestberechnung von <strong>4 Stunden</strong>. Kürzer gebuchte Einsätze werden pauschal mit 4 Stunden abgerechnet.
+                </div>
+
+                <div class="form-group checkbox-group" id="checkbox_wrapper" style="margin-top: 24px; padding: 12px; border: 1px solid #30363d; border-radius: 6px; transition: all 0.3s ease;">
+                    <label style="cursor: pointer;">
+                        <input type="checkbox" id="abrechnung_akzeptiert" required>
+                        <span>Ich habe den Abrechnungshinweis (4-Stunden-Mindestberechnung) zur Kenntnis genommen und akzeptiere diesen. <span class="req-star">*</span></span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <div class="form-group">
+                <label for="nachricht">Sonstige Bemerkungen / Besonderheiten <span class="opt-text">(Optional)</span></label>
+                <textarea id="nachricht" rows="3" placeholder="Z. B. Barrierefreiheit..."></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary btn-block">Absenden</button>
+        </form>
+    </div>
+
+    <script>
+        // Maus-Follower Glow
+        const glow = document.getElementById('cursor-glow');
+        window.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        // Web-Audio Synthesizer Klick-Sound (Martinshorn)
+        let audioCtx = null;
+        let isPlaying = false;
+
+        function playSirenOnClick() {
+            if (isPlaying) return;
+            isPlaying = true;
+
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            if (!audioCtx) audioCtx = new AudioContext();
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            /* 
+            ====================================================================
+            🔊 LAUTSTÄRKE EINSTELLEN (SIRENE / SOUND)
+            --------------------------------------------------------------------
+            Ändere den Wert unten:
+            0.01  = Sehr leise
+            0.05  = Angenehm hörbar (aktuell)
+            0.15  = Laut
+            0.30  = Sehr laut
+            ====================================================================
+            */
+            const SIRENEN_LAUTSTAERKE = 0.10
+        ; 
+            
+            gain.gain.setValueAtTime(SIRENEN_LAUTSTAERKE, now);
+
+            // Tatü-Tata Töne
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(580, now + 0.22);
+            osc.frequency.setValueAtTime(440, now + 0.44);
+            osc.frequency.setValueAtTime(580, now + 0.66);
+
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+
+            osc.start(now);
+            osc.stop(now + 0.9);
+
+            setTimeout(() => { isPlaying = false; }, 950);
+        }
+
+        const amb = document.getElementById('interactiveAmbulance');
+        if (amb) {
+            amb.addEventListener('click', playSirenOnClick);
+        }
+
+        let datePickerInstances = {};
+
+        function buildHourOptions() {
+            let opts = '<option value="">Std</option>';
+            for (let h = 0; h < 24; h++) {
+                let hh = h.toString().padStart(2, '0');
+                opts += `<option value="${hh}">${hh}</option>`;
+            }
+            return opts;
+        }
+
+        function buildMinuteOptions() {
+            let opts = '<option value="">Min</option>';
+            for (let m = 0; m < 60; m++) {
+                let mm = m.toString().padStart(2, '0');
+                opts += `<option value="${mm}">${mm}</option>`;
+            }
+            return opts;
+        }
+
+        function renderTageTable() {
+            const anzahl = parseInt(document.getElementById('tageAnzahl').value);
+            const container = document.getElementById('tageTableContainer');
+            const gleicheZeitenWrapper = document.getElementById('gleicheZeitenWrapper');
+            const isGleich = document.getElementById('gleicheZeiten').checked;
+
+            let savedValues = {};
+            for (let i = 1; i <= 50; i++) {
+                if (document.getElementById(`datum_${i}`)) {
+                    savedValues[i] = {
+                        datum: document.getElementById(`datum_${i}`).value,
+                        vonStd: document.getElementById(`von_std_${i}`).value,
+                        vonMin: document.getElementById(`von_min_${i}`).value,
+                        bisStd: document.getElementById(`bis_std_${i}`).value,
+                        bisMin: document.getElementById(`bis_min_${i}`).value
+                    };
+                }
+            }
+
+            Object.keys(datePickerInstances).forEach(key => {
+                if (datePickerInstances[key]) {
+                    datePickerInstances[key].destroy();
+                }
+            });
+            datePickerInstances = {};
+
+            gleicheZeitenWrapper.style.display = (anzahl === 1) ? 'none' : 'block';
+
+            let html = '';
+
+            for (let i = 1; i <= anzahl; i++) {
+                const isDisabled = (i > 1 && isGleich) ? 'disabled' : '';
+                
+                html += `
+                    <div class="tag-zeile-multi" id="tag_zeile_${i}">
+                        <h4>Veranstaltungstag ${i}</h4>
+                        <div class="time-picker-row">
+                            <div class="form-group">
+                                <label for="datum_${i}">Datum (TT.MM.JJJJ) <span class="req-star">*</span></label>
+                                <input type="text" id="datum_${i}" required placeholder="Datum auswählen..." class="time-input-field datepicker-input" readonly>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Dienstzeit Von <span class="req-star">*</span></label>
+                                <div class="time-select-group">
+                                    <select id="von_std_${i}" required ${isDisabled} onchange="syncZeiten(${i})" class="time-input-field">
+                                        ${buildHourOptions()}
+                                    </select>
+                                    <span class="time-colon">:</span>
+                                    <select id="von_min_${i}" required ${isDisabled} onchange="syncZeiten(${i})" class="time-input-field">
+                                        ${buildMinuteOptions()}
+                                    </select>
+                                    <span class="time-unit">Uhr</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Dienstzeit Bis <span class="req-star">*</span></label>
+                                <div class="time-select-group">
+                                    <select id="bis_std_${i}" required ${isDisabled} onchange="syncZeiten(${i})" class="time-input-field">
+                                        ${buildHourOptions()}
+                                    </select>
+                                    <span class="time-colon">:</span>
+                                    <select id="bis_min_${i}" required ${isDisabled} onchange="syncZeiten(${i})" class="time-input-field">
+                                        ${buildMinuteOptions()}
+                                    </select>
+                                    <span class="time-unit">Uhr</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+
+            for (let i = 1; i <= anzahl; i++) {
+                datePickerInstances[i] = flatpickr(`#datum_${i}`, {
+                    locale: "de",
+                    dateFormat: "d.m.Y",
+                    allowInput: false,
+                    disableMobile: false
+                });
+
+                if (savedValues[i]) {
+                    if (savedValues[i].datum) datePickerInstances[i].setDate(savedValues[i].datum);
+                    if (savedValues[i].vonStd) document.getElementById(`von_std_${i}`).value = savedValues[i].vonStd;
+                    if (savedValues[i].vonMin) document.getElementById(`von_min_${i}`).value = savedValues[i].vonMin;
+                    if (savedValues[i].bisStd) document.getElementById(`bis_std_${i}`).value = savedValues[i].bisStd;
+                    if (savedValues[i].bisMin) document.getElementById(`bis_min_${i}`).value = savedValues[i].bisMin;
+                }
+            }
+
+            if (isGleich && anzahl > 1) {
+                syncZeiten(1);
+            }
+        }
+
+        function toggleGleicheZeiten() {
+            const isGleich = document.getElementById('gleicheZeiten').checked;
+            const anzahl = parseInt(document.getElementById('tageAnzahl').value);
+
+            if (!isGleich && anzahl > 1) {
+                const vonStd1 = document.getElementById('von_std_1').value;
+                const vonMin1 = document.getElementById('von_min_1').value;
+                const bisStd1 = document.getElementById('bis_std_1').value;
+                const bisMin1 = document.getElementById('bis_min_1').value;
+
+                renderTageTable();
+
+                for (let i = 2; i <= anzahl; i++) {
+                    const vonStdElem = document.getElementById(`von_std_${i}`);
+                    const vonMinElem = document.getElementById(`von_min_${i}`);
+                    const bisStdElem = document.getElementById(`bis_std_${i}`);
+                    const bisMinElem = document.getElementById(`bis_min_${i}`);
+
+                    if (vonStdElem) { vonStdElem.disabled = false; vonStdElem.value = vonStd1; }
+                    if (vonMinElem) { vonMinElem.disabled = false; vonMinElem.value = vonMin1; }
+                    if (bisStdElem) { bisStdElem.disabled = false; bisStdElem.value = bisStd1; }
+                    if (bisMinElem) { bisMinElem.disabled = false; bisMinElem.value = bisMin1; }
+                }
+            } else {
+                renderTageTable();
+            }
+        }
+
+        function syncZeiten(sourceTag) {
+            const isGleich = document.getElementById('gleicheZeiten').checked;
+            const anzahl = parseInt(document.getElementById('tageAnzahl').value);
+
+            if (isGleich && sourceTag === 1 && anzahl > 1) {
+                const vonStd = document.getElementById('von_std_1').value;
+                const vonMin = document.getElementById('von_min_1').value;
+                const bisStd = document.getElementById('bis_std_1').value;
+                const bisMin = document.getElementById('bis_min_1').value;
+
+                for (let i = 2; i <= anzahl; i++) {
+                    const vonStdElem = document.getElementById(`von_std_${i}`);
+                    const vonMinElem = document.getElementById(`von_min_${i}`);
+                    const bisStdElem = document.getElementById(`bis_std_${i}`);
+                    const bisMinElem = document.getElementById(`bis_min_${i}`);
+
+                    if (vonStdElem) vonStdElem.value = vonStd;
+                    if (vonMinElem) vonMinElem.value = vonMin;
+                    if (bisStdElem) bisStdElem.value = bisStd;
+                    if (bisMinElem) bisMinElem.value = bisMin;
+                }
+            }
+        }
+
+        function valOrEmpty(id) {
+            const el = document.getElementById(id);
+            if (!el || !el.value || el.value.trim() === '') {
+                return 'Nicht angegeben (leer)';
+            }
+            return el.value.trim();
+        }
+
+        function generateReportText() {
+            const anzahlTage = document.getElementById('tageAnzahl').value;
+            
+            let text = `==================================================\n`;
+            text += ` NEUE SANITÄTSDIENST-ANFRAGE (MSSD)\n`;
+            text += `==================================================\n\n`;
+
+            text += `--- 1. ANGABEN ZUM VERANSTALTER ---\n`;
+            text += `• Name / Ansprechpartner: ${valOrEmpty('name')}\n`;
+            text += `• Anschrift: ${valOrEmpty('anschrift_verst')}\n`;
+            text += `• Organisation / Verein: ${valOrEmpty('organisation')}\n`;
+            text += `• Telefonnummer: ${valOrEmpty('telefon')}\n`;
+            text += `• E-Mail-Adresse: ${valOrEmpty('email')}\n\n`;
+
+            text += `--- 2. DETAILS ZUR VERANSTALTUNG ---\n`;
+            text += `• Veranstaltungsname: ${valOrEmpty('veranstaltungsname')}\n`;
+            text += `• Art der Veranstaltung: ${valOrEmpty('art')}\n`;
+            text += `• Veranstaltungsort / Adresse: ${valOrEmpty('ort')}\n`;
+            text += `• Größe der Freifläche: ${valOrEmpty('freiflache')} m²\n\n`;
+
+            text += `--- 3. BESUCHER & PERSONAL ---\n`;
+            text += `• Zugelassene Besucher: ${valOrEmpty('besucher_zugelassen')}\n`;
+            text += `• Erwartete Besucher: ${valOrEmpty('besucher_erwartet')}\n`;
+            text += `• Benötigte Einsatzkräfte: ${valOrEmpty('einsatzkraefte')}\n`;
+            text += `• Verpflegung vor Ort: ${valOrEmpty('verpflegung')}\n\n`;
+
+            text += `--- 4. ANSPRECHPARTNER VOR ORT ---\n`;
+            text += `• Prominenz / VIPs: ${valOrEmpty('prominenz')}\n`;
+            text += `• Polizeiliche Erkenntnisse: ${valOrEmpty('erhibitnisse')}\n`;
+            text += `• Name vor Ort: ${valOrEmpty('ap_vorname')} ${valOrEmpty('ap_name')}\n`;
+            text += `• Handy vor Ort: ${valOrEmpty('ap_handy')}\n\n`;
+
+            text += `--- 5. ZEITLICHER RAHMEN (${anzahlTage} Tag${anzahlTage > 1 ? 'e' : ''}) ---\n`;
+            for (let i = 1; i <= parseInt(anzahlTage); i++) {
+                const von = `${valOrEmpty(`von_std_${i}`)}:${valOrEmpty(`von_min_${i}`)}`;
+                const bis = `${valOrEmpty(`bis_std_${i}`)}:${valOrEmpty(`bis_min_${i}`)}`;
+                text += `  [Tag ${i}] Datum: ${valOrEmpty(`datum_${i}`)} | Von: ${von} Uhr | Bis: ${bis} Uhr\n`;
+            }
+            text += `\n`;
+
+            text += `--- RECHTLICHES & BEMERKUNGEN ---\n`;
+            text += `• Abrechnungshinweis akzeptiert: JA\n`;
+            text += `• Sonstige Bemerkungen: ${valOrEmpty('nachricht')}\n`;
+            text += `==================================================\n`;
+
+            return text;
+        }
+
+        async function validateAndSubmit(e) {
+            e.preventDefault();
+            const form = document.getElementById('anfrageForm');
+            let isValid = true;
+            let firstInvalidInput = null;
+
+            const allInputs = form.querySelectorAll('input, select, textarea');
+            allInputs.forEach(input => input.classList.remove('input-error'));
+            
+            const cbWrapper = document.getElementById('checkbox_wrapper');
+            cbWrapper.style.border = '1px solid #30363d';
+            cbWrapper.style.backgroundColor = 'transparent';
+
+            allInputs.forEach(input => {
+                if (input.hasAttribute('required') && !input.disabled) {
+                    let hasError = false;
+
+                    if (input.type === 'checkbox') {
+                        if (!input.checked) {
+                            hasError = true;
+                            cbWrapper.style.border = '3px solid #ef4444';
+                            cbWrapper.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+                        }
+                    } else if (input.type === 'email') {
+                        const emailVal = input.value.trim();
+                        if (emailVal === '' || !emailVal.includes('@') || !emailVal.includes('.')) {
+                            hasError = true;
+                        }
+                    } else {
+                        if (!input.value || input.value.trim() === '') {
+                            hasError = true;
+                        }
+                    }
+
+                    if (hasError) {
+                        isValid = false;
+                        if (input.type !== 'checkbox') {
+                            input.classList.add('input-error');
+                        }
+                        if (!firstInvalidInput) {
+                            firstInvalidInput = (input.type === 'checkbox') ? cbWrapper : input;
+                        }
+                    }
+                }
+            });
+
+            if (!isValid) {
+                if (firstInvalidInput) {
+                    firstInvalidInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (firstInvalidInput.focus && typeof firstInvalidInput.focus === 'function') {
+                        firstInvalidInput.focus();
+                    }
+                }
+                return false;
+            }
+
+            document.getElementById('nachricht_komplett').value = generateReportText();
+
+            const formData = new FormData();
+            formData.append('_subject', document.querySelector('input[name="_subject"]').value);
+            formData.append('Anfrage_Details', document.getElementById('nachricht_komplett').value);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (response.ok) {
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    alert('Es gab ein Problem beim Senden. Bitte versuchen Sie es später noch einmal.');
+                }
+            } catch (error) {
+                alert('Netzwerkfehler. Bitte überprüfen Sie Ihre Internetverbindung.');
+            }
+
+            return false;
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+            window.location.href = 'index.html';
+        }
+
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('input-error') && e.target.value.trim() !== '') {
+                e.target.classList.remove('input-error');
+            }
+        });
+
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('input-error') && e.target.value !== '') {
+                e.target.classList.remove('input-error');
+            }
+            if (e.target.id === 'abrechnung_akzeptiert' && e.target.checked) {
+                const cbWrapper = document.getElementById('checkbox_wrapper');
+                cbWrapper.style.border = '1px solid #30363d';
+                cbWrapper.style.backgroundColor = 'transparent';
+            }
+        });
+
+        renderTageTable();
+    </script>
+</body>
+</html>
